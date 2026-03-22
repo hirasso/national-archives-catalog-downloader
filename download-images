@@ -86,6 +86,10 @@ for (let i = 0; i < count; i++) {
 
   await writeFile(filePath, await response.body());
   console.log(` -> ${filename}`);
+
+  /** Pause between downloads to avoid hammering the server */
+  const delay = 1000 + Math.random() * 2000;
+  await new Promise((resolve) => setTimeout(resolve, delay));
 }
 
 console.log(`Done! ${count} files saved to ${folder}/`);
