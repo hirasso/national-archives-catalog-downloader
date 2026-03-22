@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+#
+# extract-text — OCR all .tif files in a folder using Tesseract.
+# Outputs a .txt file alongside each .tif.
+#
+# Usage:
+#   extract-text [folder]
+#
+# Arguments:
+#   folder   Path to directory containing .tif files (default: current directory)
+#
+# Examples:
+#   extract-text
+#   extract-text ./downloads/12345
+
+dir="${1:-.}"
+
+for f in "$dir"/*.tif; do
+  base=$(basename "$f" .tif)
+  tesseract "$f" "$dir/$base" txt
+done
