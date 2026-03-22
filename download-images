@@ -5,7 +5,7 @@
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "fs/promises";
 import { join, extname, basename } from "path";
-import { existsSync } from "fs";
+import { readdirSync } from "fs";
 
 /** Require a URL as the first CLI argument */
 const url = process.argv[2];
@@ -45,6 +45,13 @@ const count = await thumbs.count();
 console.log(`Found ${count} images`);
 
 for (let i = 0; i < count; i++) {
+  const prefix = String(i + 1).padStart(4, "0");
+  const existing = readdirSync(outDir).find((f) => f.startsWith(prefix));
+  if (existing) {
+    console.log(`[${i + 1}/${count}] Skipping ${existing} (already exists)`);
+    continue;
+  }
+
   process.stdout.write(`[${i + 1}/${count}] Downloading...`);
 
   /** Click the thumbnail to load it in the viewer panel */
@@ -74,13 +81,8 @@ for (let i = 0; i < count; i++) {
 
   /** Name files numerically (zero-padded) so they sort in display order */
   const ext = extname(new URL(href).pathname) || ".bin";
-  const filename = `${String(i + 1).padStart(4, "0")}${ext}`;
+  const filename = `${prefix}${ext}`;
   const filePath = join(outDir, filename);
-
-  if (existsSync(filePath)) {
-    console.log(`[${i + 1}/${count}] Skipping (already exists)`);
-    continue;
-  }
 
   await writeFile(filePath, await response.body());
   console.log(` -> ${filename}`);
