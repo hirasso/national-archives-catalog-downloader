@@ -24,17 +24,29 @@ Converts all images in `<folder>/images/` into a single PDF file.
 
 Output: `<folder-name>.pdf` in the parent directory. Supports `.tif`, `.tiff`, `.jpg`, `.jpeg`, `.png`, `.webp`.
 
+### `extract-text <folder>`
+
+OCR all `.tif` files in a folder using Tesseract, outputting a `.txt` file alongside each image.
+
+```bash
+./extract-text ./results/number-66-1-of-2/images
+```
+
+Requires [`tesseract`](https://github.com/tesseract-ocr/tesseract) to be installed.
+
 ## Example workflow
 
 ```bash
 ./download-images https://catalog.archives.gov/id/332275713
 ./create-pdf ./results/number-66-1-of-2
+./extract-text ./results/number-66-1-of-2/images
 ```
 
 ## Requirements
 
 - [Node.js `^22.0.0`](https://nodejs.org/)
 - [pnpm](https://pnpm.io/)
+- [tesseract](https://github.com/tesseract-ocr/tesseract) — for `extract-text`
 
 ## Install
 
