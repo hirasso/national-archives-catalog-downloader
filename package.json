@@ -1,0 +1,30 @@
+{
+  "name": "national-archives-catalog-downloader",
+  "version": "1.0.0",
+  "description": "A small toolkit for downloading images from [National Archives catalog](https://catalog.archives.gov/) pages and converting them to PDF using [Playwright](https://playwright.dev/) browser automation.",
+  "keywords": [
+    "playwright"
+  ],
+  "authors": [
+    {
+      "name": "Rasso Hilber",
+      "email": "mail@rassohilber.com",
+      "url": "https://rassohilber.com"
+    },
+    {
+      "name": "Claude",
+      "url": "https://claude.ai"
+    }
+  ],
+  "license": "ISC",
+  "engines": {
+    "node": "^22.0.0"
+  },
+  "packageManager": "pnpm@10.32.1",
+  "dependencies": {
+    "@playwright/cli": "^0.1.1",
+    "pdf-lib": "^1.17.1",
+    "playwright": "^1.58.2",
+    "sharp": "^0.34.5"
+  }
+}

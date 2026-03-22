@@ -1,0 +1,49 @@
+#!/usr/bin/env node
+
+// @ts-check
+
+import { PDFDocument } from 'pdf-lib';
+import sharp from 'sharp';
+import { readdir, writeFile } from 'fs/promises';
+import { existsSync } from 'fs';
+import { join, resolve, basename } from 'path';
+
+const folderArg = process.argv[2];
+if (!folderArg) {
+  console.error('Usage: node create-pdf.mjs <folder>');
+  process.exit(1);
+}
+
+const folder = resolve(folderArg);
+const imagesDir = join(folder, 'images');
+
+if (!existsSync(imagesDir)) {
+  console.error(`No "images" subfolder found in ${folder}`);
+  process.exit(1);
+}
+
+const files = (await readdir(imagesDir))
+  .filter(f => /\.(tif|tiff|jpg|jpeg|png|webp)$/i.test(f))
+  .sort();
+
+if (!files.length) {
+  console.error('No images found in images/');
+  process.exit(1);
+}
+
+console.log(`Found ${files.length} images, building PDF...`);
+
+const pdf = await PDFDocument.create();
+
+for (const file of files) {
+  const imgPath = join(imagesDir, file);
+  const pngBuffer = await sharp(imgPath).png().toBuffer();
+  const img = await pdf.embedPng(pngBuffer);
+  const page = pdf.addPage([img.width, img.height]);
+  page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+}
+
+const outName = basename(folder) + '.pdf';
+const outPath = join(folder, '..', outName);
+await writeFile(outPath, await pdf.save());
+console.log(`Saved: ${outPath}`);

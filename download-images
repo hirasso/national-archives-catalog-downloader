@@ -1,0 +1,86 @@
+#!/usr/bin/env node
+
+// @ts-check
+
+import { chromium } from "playwright";
+import { mkdir, rm, writeFile } from "fs/promises";
+import { join, extname, basename } from "path";
+import { existsSync } from "fs";
+
+/** Require a URL as the first CLI argument */
+const url = process.argv[2];
+if (!url) {
+  console.error("Usage: ./download-images <url>");
+  process.exit(1);
+}
+
+const browser = await chromium.launch();
+const page = await browser.newPage();
+
+/** Navigate and wait until no more network requests are in flight */
+console.log(`Navigating to ${url}...`);
+await page.goto(url, { waitUntil: "networkidle" });
+
+/** Use the page title as the output folder name */
+const title = await page
+  .locator('[data-testid="nac-page-header--title"]')
+  .first()
+  .textContent();
+
+if (!title) {
+  throw new Error(`No title found in ${url}`);
+}
+
+/** Strip characters that are invalid in directory names */
+const sanitizedTitle = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const folder = `results/${sanitizedTitle}/images`;
+const outDir = join(process.cwd(), folder);
+
+/** Always start with a clean output directory */
+if (existsSync(outDir)) {
+  await rm(outDir, { recursive: true });
+}
+await mkdir(outDir, { recursive: true });
+console.log(`Saving to: ${folder}/`);
+
+/** Each thumbnail is a tab that, when clicked, loads the full-size viewer */
+const thumbs = page.locator('[data-testid="nac-objects--thumbs"] [role="tab"]');
+const count = await thumbs.count();
+console.log(`Found ${count} images`);
+
+for (let i = 0; i < count; i++) {
+  process.stdout.write(`\r[${i + 1}/${count}] Downloading...`);
+
+  /** Click the thumbnail to load it in the viewer panel */
+  await thumbs.nth(i).click();
+
+  /**
+   * The download button's href points to the full-resolution file;
+   * wait for it to appear before reading the URL
+   */
+  const downloadBtn = page.locator(
+    '[data-testid="nac-object-viewer--download-button"]',
+  );
+  await downloadBtn.waitFor({ state: "visible" });
+  const href = await downloadBtn.getAttribute("href");
+
+  if (!href) {
+    console.warn(`\nNo href found for thumb ${i + 1}, skipping`);
+    continue;
+  }
+
+  /** Fetch the file through the existing browser session to carry cookies/auth */
+  const response = await page.request.get(href);
+  if (!response.ok()) {
+    console.warn(`\nFailed to download ${href} (${response.status()})`);
+    continue;
+  }
+
+  /** Name files numerically (zero-padded) so they sort in display order */
+  const ext = extname(new URL(href).pathname) || ".bin";
+  const filename = `${String(i + 1).padStart(4, "0")}${ext}`;
+  await writeFile(join(outDir, filename), await response.body());
+}
+
+console.log(`\nDone! ${count} files saved to ${folder}/`);
+await browser.close();
