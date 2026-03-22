@@ -45,7 +45,7 @@ const count = await thumbs.count();
 console.log(`Found ${count} images`);
 
 for (let i = 0; i < count; i++) {
-  process.stdout.write(`\r[${i + 1}/${count}] Downloading...`);
+  process.stdout.write(`[${i + 1}/${count}] Downloading...`);
 
   /** Click the thumbnail to load it in the viewer panel */
   await thumbs.nth(i).click();
@@ -61,14 +61,14 @@ for (let i = 0; i < count; i++) {
   const href = await downloadBtn.getAttribute("href");
 
   if (!href) {
-    console.warn(`\nNo href found for thumb ${i + 1}, skipping`);
+    console.warn(`No href found for thumb ${i + 1}, skipping`);
     continue;
   }
 
   /** Fetch the file through the existing browser session to carry cookies/auth */
   const response = await page.request.get(href);
   if (!response.ok()) {
-    console.warn(`\nFailed to download ${href} (${response.status()})`);
+    console.warn(`Failed to download ${href} (${response.status()})`);
     continue;
   }
 
@@ -78,12 +78,13 @@ for (let i = 0; i < count; i++) {
   const filePath = join(outDir, filename);
 
   if (existsSync(filePath)) {
-    process.stdout.write(`\r[${i + 1}/${count}] Skipping (already exists)...`);
+    console.log(`[${i + 1}/${count}] Skipping (already exists)`);
     continue;
   }
 
   await writeFile(filePath, await response.body());
+  console.log(` -> ${filename}`);
 }
 
-console.log(`\nDone! ${count} files saved to ${folder}/`);
+console.log(`Done! ${count} files saved to ${folder}/`);
 await browser.close();
