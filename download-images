@@ -4,7 +4,7 @@
 
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "fs/promises";
-import { join, extname, basename } from "path";
+import { join, basename } from "path";
 import { readdirSync } from "fs";
 
 /** Require a URL as the first CLI argument */
@@ -45,7 +45,7 @@ const count = await thumbs.count();
 console.log(`Found ${count} images`);
 
 for (let i = 0; i < count; i++) {
-  const prefix = String(i + 1).padStart(4, "0");
+  const prefix = String(i + 1).padStart(5, "0");
   const existing = readdirSync(outDir).find((f) => f.startsWith(prefix));
   if (existing) {
     console.log(`[${i + 1}/${count}] Skipping ${existing} (already exists)`);
@@ -80,8 +80,11 @@ for (let i = 0; i < count; i++) {
   }
 
   /** Name files numerically (zero-padded) so they sort in display order */
-  const ext = extname(new URL(href).pathname) || ".bin";
-  const filename = `${prefix}${ext}`;
+  const originalName = basename(new URL(href).pathname);
+  if (!/\.(jpe?g|png|gif|tiff?|bmp|webp|jp2|pdf)$/i.test(originalName)) {
+    throw new Error(`Unexpected file type for thumb ${i + 1}: "${originalName}" (href: ${href})`);
+  }
+  const filename = `${prefix}-${originalName}`;
   const filePath = join(outDir, filename);
 
   await writeFile(filePath, await response.body());
