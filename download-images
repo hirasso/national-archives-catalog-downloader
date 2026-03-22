@@ -3,7 +3,7 @@
 // @ts-check
 
 import { chromium } from "playwright";
-import { mkdir, rm, writeFile } from "fs/promises";
+import { mkdir, writeFile } from "fs/promises";
 import { join, extname, basename } from "path";
 import { existsSync } from "fs";
 
@@ -36,10 +36,6 @@ const sanitizedTitle = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").re
 const folder = `results/${sanitizedTitle}/images`;
 const outDir = join(process.cwd(), folder);
 
-/** Always start with a clean output directory */
-if (existsSync(outDir)) {
-  await rm(outDir, { recursive: true });
-}
 await mkdir(outDir, { recursive: true });
 console.log(`Saving to: ${folder}/`);
 
@@ -79,7 +75,14 @@ for (let i = 0; i < count; i++) {
   /** Name files numerically (zero-padded) so they sort in display order */
   const ext = extname(new URL(href).pathname) || ".bin";
   const filename = `${String(i + 1).padStart(4, "0")}${ext}`;
-  await writeFile(join(outDir, filename), await response.body());
+  const filePath = join(outDir, filename);
+
+  if (existsSync(filePath)) {
+    process.stdout.write(`\r[${i + 1}/${count}] Skipping (already exists)...`);
+    continue;
+  }
+
+  await writeFile(filePath, await response.body());
 }
 
 console.log(`\nDone! ${count} files saved to ${folder}/`);
