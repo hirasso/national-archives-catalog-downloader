@@ -8,12 +8,16 @@ import { readdir, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, resolve, basename } from 'path';
 
-const folderArg = process.argv[2];
+/** Parse CLI args — folder is the first non-flag argument */
+const args = process.argv.slice(2);
+const compress = args.includes('--compress');
+const folderArg = args.find(a => !a.startsWith('--'));
 if (!folderArg) {
-  console.error('Usage: node create-pdf.mjs <folder>');
+  console.error('Usage: create-pdf [--compress] <folder>');
   process.exit(1);
 }
 
+/** Resolve the target folder and its images/ subdirectory */
 const folder = resolve(folderArg);
 const imagesDir = join(folder, 'images');
 
@@ -22,6 +26,7 @@ if (!existsSync(imagesDir)) {
   process.exit(1);
 }
 
+/** Collect supported image files, sorted so page order is deterministic */
 const files = (await readdir(imagesDir))
   .filter(f => /\.(tif|tiff|jpg|jpeg|png|webp)$/i.test(f))
   .sort();
@@ -31,18 +36,28 @@ if (!files.length) {
   process.exit(1);
 }
 
-console.log(`Found ${files.length} images, building PDF...`);
+console.log(`Found ${files.length} images, building PDF (${compress ? 'lossy' : 'lossless'})...`);
 
 const pdf = await PDFDocument.create();
 
 for (const file of files) {
   const imgPath = join(imagesDir, file);
-  const pngBuffer = await sharp(imgPath).png().toBuffer();
-  const img = await pdf.embedPng(pngBuffer);
+  let img;
+  if (!compress) {
+    /** Lossless: convert to PNG via sharp, embed as-is */
+    const buf = await sharp(imgPath).png().toBuffer();
+    img = await pdf.embedPng(buf);
+  } else {
+    /** Lossy (--compress): convert to JPEG q80 for smaller output */
+    const buf = await sharp(imgPath).jpeg({ quality: 80 }).toBuffer();
+    img = await pdf.embedJpg(buf);
+  }
+  /** Each image gets its own page sized to the image dimensions */
   const page = pdf.addPage([img.width, img.height]);
   page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
 }
 
+/** Write the PDF next to the source folder, named after it */
 const outName = basename(folder) + '.pdf';
 const outPath = join(folder, '..', outName);
 await writeFile(outPath, await pdf.save());
